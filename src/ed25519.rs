@@ -273,3 +273,41 @@ mod tests {
 
     }
 }
+
+#[cfg(all(test, feature = "with-bench"))]
+mod bench {
+    use test::Bencher;
+    use rand::{Rng, OsRng};
+    use ed25519::{keypair, signature, verify};
+    extern crate rand;
+
+    #[bench]
+    pub fn bench_keypair(bh: &mut Bencher) {
+        let mut rng = OsRng::new().ok().unwrap();
+        let mut seed = [0u8; 32];
+        rng.fill_bytes(&mut seed);
+        bh.iter(|| keypair(&seed));
+    }
+
+    #[bench]
+    pub fn bench_sign(bh: &mut Bencher) {
+        let mut rng = OsRng::new().ok().unwrap();
+        let mut seed = [0u8; 32];
+        let message = [0u8; 100];
+        rng.fill_bytes(&mut seed);
+        let (secret_key, _) = keypair(&seed);
+        bh.iter(|| signature(&message, &secret_key));
+    }
+
+    #[bench]
+    pub fn bench_verify(bh: &mut Bencher) {
+        let mut rng = OsRng::new().ok().unwrap();
+        let mut seed = [0u8; 32];
+        let message = [0u8; 100];
+        rng.fill_bytes(&mut seed);
+        let (secret_key, public_key) = keypair(&seed);
+        let sig = signature(&message, &secret_key);
+        bh.iter(|| verify(&message, &public_key, &sig));
+    }
+
+}

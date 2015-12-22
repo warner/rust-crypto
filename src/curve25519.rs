@@ -2163,7 +2163,9 @@ pub fn curve25519_base(x: &[u8]) -> [u8; 32] {
 
 #[cfg(test)]
 mod tests {
-    use curve25519::{Fe, curve25519_base};
+    use curve25519::{Fe, curve25519, curve25519_base};
+    use rand::{Rng, OsRng};
+    extern crate rand;
 
     #[test]
     fn from_to_bytes_preserves() {
@@ -2255,6 +2257,20 @@ mod tests {
             ,0xeb,0xa4,0xa9,0x8e,0xaa,0x9b,0x4e,0x6a ];
         assert_eq!(pk.to_vec(), correct.to_vec());
     }
+
+    #[test]
+    pub fn scalarmult() {
+        let mut rng = OsRng::new().ok().unwrap();
+        let mut sk1 = [0u8; 32];
+        let mut sk2 = [0u8; 32];
+        rng.fill_bytes(&mut sk1);
+        rng.fill_bytes(&mut sk2);
+        let pk1 = curve25519_base(&sk1);
+        let pk2 = curve25519_base(&sk2);
+        assert_eq!(curve25519(&sk1, &pk2), curve25519(&sk2, &pk1));
+    }
+
+
 }
 
 static BI: [GePrecomp; 8] = [
@@ -3646,3 +3662,31 @@ static GE_PRECOMP_BASE : [[GePrecomp; 8]; 32] = [
  },
 ],
 ];
+
+#[cfg(all(test, feature = "with-bench"))]
+mod bench {
+    use test::Bencher;
+    use rand::{Rng, OsRng};
+    use curve25519::{curve25519, curve25519_base};
+    extern crate rand;
+
+    #[bench]
+    pub fn scalarmult_base(bh: &mut Bencher) {
+        let mut rng = OsRng::new().ok().unwrap();
+        let mut sk1 = [0u8; 32];
+        rng.fill_bytes(&mut sk1);
+        bh.iter(|| curve25519_base(&sk1));
+    }
+
+    #[bench]
+    pub fn scalarmult(bh: &mut Bencher) {
+        let mut rng = OsRng::new().ok().unwrap();
+        let mut sk1 = [0u8; 32];
+        let mut sk2 = [0u8; 32];
+        rng.fill_bytes(&mut sk1);
+        rng.fill_bytes(&mut sk2);
+        let pk2 = curve25519_base(&sk2);
+        bh.iter(|| curve25519(&sk1, &pk2));
+    }
+
+}
